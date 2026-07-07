@@ -46,11 +46,11 @@ public class VectorDocument {
     @JdbcTypeCode(SqlTypes.VECTOR)
     // @JdbcTypeCode(SqlTypes.VECTOR) tells Hibernate:
     // "This column stores vector data (special type for embeddings)."
-    @Array(length = 768)
-    // @Array(length = 768) specifies the length of the vector (768 dimensions).
-    @Column(name="embedding", columnDefinition = "vector(768)")
-    // @Column(name="embedding", columnDefinition = "vector(768)") tells JPA:
-    // "Map this field to a database column named 'embedding' with type vector(768)."
+    @Array(length = 3072)
+    // @Array(length = 3072) specifies the length of the vector (3072 dimensions).
+    @Column(name="embedding", columnDefinition = "vector(3072)")
+    // @Column(name="embedding", columnDefinition = "vector(3072)") tells JPA:
+    // "Map this field to a database column named 'embedding' with type vector(3072)."
     //
     // This is where we store the AI-generated embedding (numerical representation of text).
     private float[] embedding;
