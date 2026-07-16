@@ -1,142 +1,219 @@
-#  RAG Basics: Spring AI + PostgreSQL PGVector
+Here's your complete README.md — just copy and paste directly into a file called README.md in your project root:
+markdown# 🧠 DocMind AI — RAG Document Q&A System
 
-## Project Overview
-Standard AI models are limited to the data they were trained on. **Retrieval-Augmented Generation (RAG)** solves this by:
-1.  **Retrieving** relevant facts from your own database (PostgreSQL).
-2.  **Augmenting** the user's prompt with those facts.
-3.  **Generating** a response that is grounded in your private data.
+> Chat with your documents intelligently using Google Gemini AI
 
-This project specifically uses **PGVector**, an extension that turns a standard PostgreSQL database into a powerful vector engine.
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.9-green)
+![Spring AI](https://img.shields.io/badge/Spring%20AI-1.1.2-blue)
+![React](https://img.shields.io/badge/React-19-cyan)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PGVector-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
+## 🌐 Live Demo
+**Frontend:** https://rag-frontend-kappa-ten.vercel.app
+
+**Backend:** https://spring-ai-rag-pgvector-gemini-basics.onrender.com
+
+---
+
+## 📌 What is DocMind AI?
+
+DocMind AI is a full-stack **RAG (Retrieval Augmented Generation)** based Document Q&A system built with **Spring Boot + Spring AI + Google Gemini**.
+
+Upload any PDF → Ask questions in natural language → Get accurate AI answers based ONLY on your document.
+
+### The Problem It Solves
+Normal ChatGPT answers from its training data and can hallucinate.
+DocMind AI answers ONLY from your uploaded documents — grounded, accurate, private.
+
+---
+
+## ✨ Features
+
+- 📄 **PDF Upload** — Upload any PDF, automatically chunked and embedded
+- 🔍 **Semantic Search** — Finds relevant content using cosine similarity on 3072-dim vectors
+- 💬 **Persistent Chat Memory** — AI remembers previous questions within a session
+- 🔐 **JWT Authentication** — Secure per-user document isolation
+- 💡 **Related Questions** — AI suggests 3 follow-up questions after every answer
+- 📁 **Document Management** — List and delete uploaded documents
+- 🌐 **Fully Deployed** — Live on internet with cloud database
+
+---
+
+## 🏗️ Architecture
+PDF Upload Flow:
+─────────────────────────────────────────────────────
+User uploads PDF
+↓
+PDFBox extracts text page by page
+↓
+Text split into ~800 char semantic chunks
+↓
+Google Gemini Embedding Model
+generates 3072-dimensional vectors
+↓
+Vectors stored in PostgreSQL + PGVector
+(hosted on Aiven Cloud)
+Question Answering Flow:
+─────────────────────────────────────────────────────
+User asks a question
+↓
+Question converted to 3072-dim vector
+↓
+Cosine similarity search in PGVector
+retrieves top 3 relevant chunks
+↓
+Last 10 chat messages + chunks + question
+sent to Google Gemini 2.5 Flash
+↓
+Gemini generates grounded answer
+
+3 related follow-up questions
+↓
+Answer saved to chat_messages table
+↓
+Response returned to user
 
 
 ---
 
-##  The Core Concept: What is RAG?
+## 🛠️ Tech Stack
 
-Normally, an AI like Gemini only knows what it was trained on. It doesn't know your private data or recent notes. **RAG** solves this by:
-1.  **Storing** your data as "Embeddings" (math vectors) in a database.
-2.  **Searching** for the most relevant pieces of data when you ask a question.
-3.  **Feeding** that relevant data (context) to the AI to help it answer accurately.
-
----
-
-##  Tech Stack & Tools
-* **Java 25**: Leveraging the latest LTS features.
-* **Spring Boot 3.5.9**: The backbone of the API.
-* **Spring AI 1.1.2**: The framework connecting Java to AI models.
-* **Google Gemini 2.5 Flash**: The LLM for generating answers.
-* **Text-Embedding-004**: Google's model that turns text into 768-dimension vectors.
-* **PostgreSQL + PGVector**: A relational database that can perform "similarity searches" using vectors.
-
----
-
-## Dependencies Needed (Used)
-```xml
-<dependencies>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-advisors-vector-store</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-starter-model-google-genai</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
-    </dependency>
-
-    <dependency>
-        <groupId>org.springframework.ai</groupId>
-        <artifactId>spring-ai-starter-model-google-genai-embedding</artifactId>
-    </dependency>
-
-    <dependency>
-        <groupId>org.hibernate.orm</groupId>
-        <artifactId>hibernate-vector</artifactId>
-        <version>6.6.2.Final</version> </dependency>
-
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-
-
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-</dependencies>
-```
-
-##  Technical Concepts
-
-### 1. Embeddings: The AI's Language
-Computers don't understand words; they understand numbers.
-* **Embedding Model**: We use `text-embedding-004` from Google. It converts a sentence like "The sky is blue" into a **768-dimensional vector** (a list of 768 numbers).
-* **Semantic Meaning**: Sentences with similar meanings will have vectors that are mathematically "close" to each other in space.
-
-### 2. PGVector & Similarity Search
-Standard SQL uses `WHERE name = 'John'`. Vector databases use **Cosine Distance** (`<=>` in PGVector).
-* Our custom query in `VectorRepository` finds documents by calculating which vectors in the database are most similar to the user's question vector.
-
-
-
-### 3. The RAG Workflow
-1.  **Ingestion (`/add`)**: Text is converted to a vector and stored in PostgreSQL.
-2.  **Query (`/ask`)**:
-    - The user's question is converted to a vector.
-    - We search PostgreSQL for the Top-3 most relevant document chunks.
-    - We "stuff" those chunks into the prompt.
-    - Gemini answers based *only* on that context.
+| Layer | Technology | Why chosen |
+|---|---|---|
+| Backend | Spring Boot 3.5.9 | Production-grade Java framework |
+| AI Framework | Spring AI 1.1.2 | Native Spring integration with LLMs |
+| LLM | Google Gemini 2.5 Flash | Fast, free tier, high quality |
+| Embeddings | Gemini Embedding 001 | 3072-dim high quality embeddings |
+| Vector DB | PostgreSQL + PGVector | Vector search in existing DB, no extra infra |
+| Cloud DB | Aiven | Managed PostgreSQL with PGVector |
+| Security | Spring Security + JWT | Stateless auth, industry standard |
+| PDF Processing | Apache PDFBox 3.0.2 | Reliable PDF text extraction |
+| Frontend | React 19 | Modern, component-based UI |
+| Backend Deploy | Render | Free cloud hosting |
+| Frontend Deploy | GitHub Pages | Free static hosting |
 
 ---
 
-##  Component Reference
+## 📡 API Endpoints
 
-### `VectorDocument.java`
-This is the blueprint of how our data looks in PostgreSQL.
-* **Text**: The actual content you want to remember.
-* **Embedding**: A `float[]` array of **768** numbers. This is the "mathematical fingerprint" of the text.
-* **@JdbcTypeCode(SqlTypes.VECTOR)**: Tells Hibernate to treat this array as a PGVector type.
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | ❌ | Register new user |
+| POST | `/api/auth/login` | ❌ | Login and get JWT token |
+| POST | `/api/documents/upload` | ✅ | Upload PDF file |
+| GET | `/api/documents` | ✅ | List all uploaded documents |
+| DELETE | `/api/documents/{id}` | ✅ | Delete a document |
+| POST | `/api/chat/ask` | ✅ | Ask question with chat memory |
+| GET | `/api/chat/history/{sessionId}` | ✅ | Get session chat history |
+| GET | `/api/chat/sessions` | ✅ | List all user sessions |
+| DELETE | `/api/chat/sessions/{sessionId}` | ✅ | Delete a session |
 
-A JPA Entity that uses `@JdbcTypeCode(SqlTypes.VECTOR)`. This allows Hibernate to talk to the special `vector` column type in PostgreSQL.
+---
 
-### `VectorRepository.java`
-This is where the magic search happens. It uses a **Native Query**:
+## 🗄️ Database Schema
+
 ```sql
-SELECT id, text, embedding FROM documents 
-ORDER BY embedding <=> cast(:queryVector AS vector) 
-LIMIT :topK
-```
-Uses a **Native Query** to perform the similarity search. The `<=>` operator is specific to PGVector and tells the database to "order by similarity to this vector."
+-- Users table
+users (id, username, password, role)
 
-### `VectorSearchService.java`
-The orchestrator. It handles the two-step process:
-1. Converting text to vectors using `EmbeddingModel`.
-2. Building the final prompt for the `ChatModel`.
+-- Vector embeddings
+documents (id, text, embedding vector(3072))
+
+-- Document metadata
+document_metadata (id, filename, fileType,
+                   totalChunks, fileSizeBytes,
+                   uploadedAt, status)
+
+-- Chat history
+chat_messages (id, username, sessionId,
+               role, content, createdAt)
+```
 
 ---
 
-##  How to Test
+## 🚀 Run Locally
 
-1.  **Database**: Ensure your PostgreSQL instance has the PGVector extension installed (`CREATE EXTENSION vector;`).
-2.  **Config**: Update your Aiven PostgreSQL credentials and Google API Key in `application.properties`.
-3.  **Step 1: Teach the AI**:
-    - **POST** to `/api/rag/add`
-    - **Body**: `{"content": "The company policy states that Friday is Pizza Day."}`
-4.  **Step 2: Ask the AI**:
-    - **POST** to `/api/rag/ask`
-    - **Body**: `{"question": "What happens on Friday?"}`
-    - **Result**: "According to the company policy, Friday is Pizza Day."
+### Prerequisites
+- Java 21+
+- Maven
+- PostgreSQL with PGVector extension
+- Google Gemini API key (free at aistudio.google.com)
+
+### Steps
+
+**1. Clone the repository**
+```bash
+git clone https://github.com/Anitaprajapati27/spring-ai-rag-pgvector-gemini-basics.git
+cd spring-ai-rag-pgvector-gemini-basics
+```
+
+**2. Set environment variables**
+```bash
+# Windows PowerShell
+$env:SPRING_AI_GOOGLE_GENAI_API_KEY="your_gemini_key"
+$env:SPRING_AI_GOOGLE_GENAI_EMBEDDING_API_KEY="your_gemini_key"
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://host:port/db?sslmode=require"
+$env:SPRING_DATASOURCE_USERNAME="your_db_username"
+$env:SPRING_DATASOURCE_PASSWORD="your_db_password"
+$env:JWT_SECRET="your-secret-key-min-32-characters-long"
+```
+
+**3. Run the backend**
+```bash
+./mvnw spring-boot:run
+```
+
+**4. Run the frontend**
+```bash
+cd ../rag-frontend
+npm install
+npm start
+```
+
+**5. Open in browser**
+http://localhost:3000
+
+---
+
+## 🔐 How Authentication Works
+
+POST /api/auth/register → create account
+POST /api/auth/login → get JWT token
+Add token to every request:
+Authorization: Bearer <your-token>
+Server validates token → identifies user
+User only sees their own documents
+
+
+---
+
+## 🎯 Key Technical Decisions
+
+**Why Spring AI instead of Python LangChain?**
+Spring AI uses familiar Spring conventions (Dependency Injection,
+auto-configuration) making it production-ready for enterprise Java
+teams. Very rare skill — differentiates from Python-based projects.
+
+**Why PGVector instead of Pinecone?**
+PGVector adds vector search to existing PostgreSQL, eliminating the
+need for a separate vector database. Simpler architecture, lower cost.
+
+**Why Google Gemini instead of OpenAI?**
+Gemini API has a generous free tier with no credit card required.
+gemini-embedding-001 produces high quality 3072-dimensional embeddings.
+
+**Why page-based chunking?**
+Page-based chunking preserves document structure and context better
+than fixed character-size chunking for most real-world PDFs.
+
+
+## 🤝 Connect
+**Anita Prajapati**
+- 🔗 GitHub: [@Anitaprajapati27](https://github.com/Anitaprajapati27)
+---
+
+## 📄 License
+
+MIT License — free to use as reference for learning!
